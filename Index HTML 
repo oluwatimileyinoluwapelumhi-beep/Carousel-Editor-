@@ -1,0 +1,406 @@
+```html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Growth Nexus - Social Media Image Editor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', system-ui, -apple-system, sans-serif; }
+        .canvas-container { max-height: 70vh; }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-slate-800 bg-slate-950/80 backdrop-blur px-6 py-4 flex justify-between items-center sticky top-0 z-50">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold text-xl shadow-lg shadow-cyan-500/20">
+                GN
+            </div>
+            <div>
+                <h1 class="font-bold text-lg leading-tight">THE GROWTH NEXUS</h1>
+                <p class="text-xs text-cyan-400 font-medium">[ INSIGHT & OUTLOOK ]</p>
+            </div>
+        </div>
+        <div class="text-xs text-slate-400 hidden sm:block">
+            Branding & Watermark Studio • <span class="text-slate-200">@Timilocruise</span>
+        </div>
+    </header>
+
+    <!-- Main Workspace -->
+    <main class="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-6 p-6 max-w-[1600px] mx-auto w-full">
+        
+        <!-- Controls Column -->
+        <div class="lg:col-span-4 bg-slate-950 border border-slate-800 rounded-2xl p-6 flex flex-col gap-6 overflow-y-auto max-h-[calc(100vh-120px)] shadow-xl">
+            
+            <!-- Upload Section -->
+            <div>
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400 mb-2">1. Select Images (Single or Batch)</label>
+                <input type="file" id="imageInput" accept="image/*" multiple class="hidden">
+                <div id="dropZone" onclick="document.getElementById('imageInput').click()" class="border-2 border-dashed border-slate-700 hover:border-cyan-500 rounded-xl p-6 text-center cursor-pointer transition-colors bg-slate-900/50 hover:bg-slate-900">
+                    <i class="fa-solid fa-images text-3xl text-cyan-400 mb-2"></i>
+                    <p class="text-sm font-medium text-slate-300">Click or drag images here to batch upload</p>
+                    <p class="text-xs text-slate-500 mt-1">Select multiple PNG, JPG, WebP photos</p>
+                </div>
+            </div>
+
+            <!-- Batch Queue Thumbnail Strip -->
+            <div id="batchContainer" class="hidden border-t border-slate-800 pt-4">
+                <div class="flex justify-between items-center mb-2">
+                    <label class="text-xs font-semibold uppercase tracking-wider text-slate-400">Batch Queue (<span id="imageCount">0</span>)</label>
+                    <button id="clearBatchBtn" class="text-xs text-rose-400 hover:text-rose-300 font-medium">Clear All</button>
+                </div>
+                <div id="thumbnailContainer" class="flex gap-2 overflow-x-auto pb-2 scrollbar-thin">
+                    <!-- Thumbnails generated dynamically -->
+                </div>
+            </div>
+
+            <!-- Preset Branding Toggle -->
+            <div class="space-y-4 border-t border-slate-800 pt-5">
+                <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">2. Watermark Details</label>
+                
+                <div>
+                    <label class="text-xs text-slate-400 mb-1 block">Group Name</label>
+                    <input type="text" id="groupText" value="THE GROWTH NEXUS [ INSIGHT & OUTLOOK ]" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400 mb-1 block">Handle / Tag</label>
+                    <input type="text" id="handleText" value="@Timilocruise" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Text Position</label>
+                        <select id="positionSelect" class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-2 text-xs text-slate-100 focus:border-cyan-500 focus:outline-none">
+                            <option value="bottom">Bottom Center</option>
+                            <option value="top">Top Center</option>
+                            <option value="center">Middle Center</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Font Size</label>
+                        <input type="range" id="fontSize" min="14" max="48" value="24" class="w-full accent-cyan-500">
+                    </div>
+                </div>
+
+                <div>
+                    <label class="text-xs text-slate-400 mb-1 block">Text Color</label>
+                    <div class="flex gap-2">
+                        <input type="color" id="textColor" value="#ffffff" class="bg-transparent h-9 w-12 cursor-pointer rounded">
+                        <label class="flex items-center gap-2 text-xs text-slate-300 cursor-pointer">
+                            <input type="checkbox" id="addBgBox" checked class="rounded accent-cyan-500">
+                            Add Overlay Box (Covers existing text)
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Cover Unwanted Text Box -->
+            <div class="border-t border-slate-800 pt-5 space-y-4">
+                <div class="flex justify-between items-center">
+                    <label class="block text-xs font-semibold uppercase tracking-wider text-slate-400">3. Custom Mask / Cover-Up</label>
+                    <label class="flex items-center gap-2 text-xs text-cyan-400 cursor-pointer">
+                        <input type="checkbox" id="enableMask" class="rounded accent-cyan-500">
+                        Enable Cover Mask
+                    </label>
+                </div>
+                <p class="text-xs text-slate-400">Use this to block out old Instagram tags or calls-to-action on the image.</p>
+                
+                <div id="maskControls" class="space-y-3 opacity-50 pointer-events-none transition-opacity">
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Mask Height & Position</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <input type="range" id="maskY" min="0" max="100" value="50" title="Y Position" class="w-full accent-cyan-500">
+                            <input type="range" id="maskHeight" min="5" max="50" value="20" title="Height" class="w-full accent-cyan-500">
+                        </div>
+                    </div>
+                    <div>
+                        <label class="text-xs text-slate-400 mb-1 block">Mask Background Color</label>
+                        <input type="color" id="maskColor" value="#000000" class="bg-transparent h-8 w-12 cursor-pointer rounded">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Ending Slide Generator Button -->
+            <div class="border-t border-slate-800 pt-5">
+                <button id="generateEndingBtn" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 py-2.5 px-4 rounded-xl text-xs font-semibold flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-wand-magic-sparkles text-cyan-400"></i>
+                    Generate Custom "Follow & Share" Slide
+                </button>
+            </div>
+
+            <!-- Download Button -->
+            <div class="pt-2 space-y-2">
+                <button id="downloadBtn" class="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-400 hover:to-blue-500 text-white font-semibold py-3 px-4 rounded-xl text-sm shadow-lg shadow-cyan-500/25 flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-download"></i>
+                    Download Current Image
+                </button>
+                <button id="downloadAllImagesBtn" class="w-full bg-slate-800 hover:bg-slate-700 text-cyan-400 border border-cyan-500/30 font-semibold py-2.5 px-4 rounded-xl text-xs flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-images"></i>
+                    Download All as Separate Images (No ZIP)
+                </button>
+                <button id="downloadBatchBtn" class="w-full bg-slate-900 hover:bg-slate-800 text-slate-400 border border-slate-800 font-semibold py-2 px-4 rounded-xl text-[11px] flex items-center justify-center gap-2 transition">
+                    <i class="fa-solid fa-file-zipper"></i>
+                    Export as ZIP Archive (Optional)
+                </button>
+            </div>
+
+        </div>
+
+        <!-- Canvas Preview Area -->
+        <div class="lg:col-span-8 bg-slate-950 border border-slate-800 rounded-2xl p-6 flex flex-col items-center justify-center relative min-h-[500px]">
+            <div class="absolute top-4 left-4 text-xs font-semibold text-slate-500 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-emerald-500"></span> Live Preview
+            </div>
+
+            <div class="canvas-container w-full h-full flex items-center justify-center overflow-hidden p-2">
+                <canvas id="editorCanvas" class="max-w-full max-h-[65vh] rounded-lg shadow-2xl border border-slate-800 object-contain"></canvas>
+            </div>
+
+            <p class="text-xs text-slate-500 mt-4 text-center">
+                Tip: Adjust parameters on the left pane to customize watermarks or cover old logos seamlessly.
+            </p>
+        </div>
+
+    </main>
+
+    <script>
+        const canvas = document.getElementById('editorCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Form Inputs
+        const imageInput = document.getElementById('imageInput');
+        const dropZone = document.getElementById('dropZone');
+        const batchContainer = document.getElementById('batchContainer');
+        const thumbnailContainer = document.getElementById('thumbnailContainer');
+        const imageCount = document.getElementById('imageCount');
+        const clearBatchBtn = document.getElementById('clearBatchBtn');
+
+        const groupText = document.getElementById('groupText');
+        const handleText = document.getElementById('handleText');
+        const positionSelect = document.getElementById('positionSelect');
+        const fontSize = document.getElementById('fontSize');
+        const textColor = document.getElementById('textColor');
+        const addBgBox = document.getElementById('addBgBox');
+
+        const enableMask = document.getElementById('enableMask');
+        const maskControls = document.getElementById('maskControls');
+        const maskY = document.getElementById('maskY');
+        const maskHeight = document.getElementById('maskHeight');
+        const maskColor = document.getElementById('maskColor');
+
+        const downloadBtn = document.getElementById('downloadBtn');
+        const downloadAllImagesBtn = document.getElementById('downloadAllImagesBtn');
+        const downloadBatchBtn = document.getElementById('downloadBatchBtn');
+        const generateEndingBtn = document.getElementById('generateEndingBtn');
+
+        // Batch state
+        let imageList = [];
+        let currentImgIndex = -1;
+
+        // Default placeholder canvas
+        function initCanvas() {
+            canvas.width = 1080;
+            canvas.height = 1350; // Instagram Portrait standard 4:5
+            drawDefaultPlaceholder();
+        }
+
+        function drawDefaultPlaceholder() {
+            const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+            gradient.addColorStop(0, '#0f172a');
+            gradient.addColorStop(1, '#1e293b');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            ctx.fillStyle = '#94a3b8';
+            ctx.font = '500 28px Inter, sans-serif';
+            ctx.textAlign = 'center';
+            ctx.fillText('Upload images in batch or generate a closing slide', canvas.width / 2, canvas.height / 2);
+        }
+
+        function renderImageOnCanvas(targetCtx, targetCanvas, imgElement) {
+            targetCanvas.width = imgElement.naturalWidth || 1080;
+            targetCanvas.height = imgElement.naturalHeight || 1350;
+
+            // Draw Base Image
+            targetCtx.drawImage(imgElement, 0, 0, targetCanvas.width, targetCanvas.height);
+
+            // Draw Cover Mask if enabled
+            if (enableMask.checked) {
+                const yPos = (maskY.value / 100) * targetCanvas.height;
+                const mH = (maskHeight.value / 100) * targetCanvas.height;
+                targetCtx.fillStyle = maskColor.value;
+                targetCtx.fillRect(0, yPos - mH/2, targetCanvas.width, mH);
+            }
+
+            // Draw Watermark Branding
+            const gText = groupText.value.trim();
+            const hText = handleText.value.trim();
+
+            if (gText || hText) {
+                const size = parseInt(fontSize.value) * (targetCanvas.width / 800);
+                const padding = size * 0.8;
+                
+                targetCtx.font = `bold ${size}px Inter, sans-serif`;
+                const gWidth = targetCtx.measureText(gText).width;
+                
+                targetCtx.font = `500 ${size * 0.8}px Inter, sans-serif`;
+                const hWidth = targetCtx.measureText(hText).width;
+
+                const boxWidth = Math.max(gWidth, hWidth) + padding * 2;
+                const boxHeight = (size * 2.2) + padding;
+
+                let x = targetCanvas.width / 2;
+                let y = targetCanvas.height - boxHeight / 2 - padding;
+
+                if (positionSelect.value === 'top') {
+                    y = boxHeight / 2 + padding;
+                } else if (positionSelect.value === 'center') {
+                    y = targetCanvas.height / 2;
+                }
+
+                // Background Box
+                if (addBgBox.checked) {
+                    targetCtx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+                    targetCtx.beginPath();
+                    const rx = x - boxWidth / 2;
+                    const ry = y - boxHeight / 2;
+                    const radius = 12;
+                    targetCtx.roundRect(rx, ry, boxWidth, boxHeight, radius);
+                    targetCtx.fill();
+                    targetCtx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+                    targetCtx.lineWidth = 1;
+                    targetCtx.stroke();
+                }
+
+                // Text
+                targetCtx.textAlign = 'center';
+                targetCtx.textBaseline = 'middle';
+
+                if (gText) {
+                    targetCtx.fillStyle = textColor.value;
+                    targetCtx.font = `bold ${size}px Inter, sans-serif`;
+                    targetCtx.fillText(gText, x, y - size * 0.5);
+                }
+
+                if (hText) {
+                    targetCtx.fillStyle = '#38bdf8'; // Cyan accent for handle
+                    targetCtx.font = `600 ${size * 0.75}px Inter, sans-serif`;
+                    targetCtx.fillText(hText, x, y + size * 0.6);
+                }
+            }
+        }
+
+        function render() {
+            if (currentImgIndex < 0 || !imageList[currentImgIndex]) {
+                initCanvas();
+                return;
+            }
+            renderImageOnCanvas(ctx, canvas, imageList[currentImgIndex].img);
+        }
+
+        function updateThumbnailsUI() {
+            if (imageList.length === 0) {
+                batchContainer.classList.add('hidden');
+                currentImgIndex = -1;
+                render();
+                return;
+            }
+
+            batchContainer.classList.remove('hidden');
+            imageCount.textContent = imageList.length;
+            thumbnailContainer.innerHTML = '';
+
+            imageList.forEach((item, idx) => {
+                const thumb = document.createElement('div');
+                thumb.className = `relative w-16 h-16 flex-shrink-0 rounded-lg overflow-hidden border-2 cursor-pointer transition ${idx === currentImgIndex ? 'border-cyan-400 scale-105' : 'border-slate-800 opacity-70 hover:opacity-100'}`;
+                
+                const imgEl = document.createElement('img');
+                imgEl.src = item.img.src;
+                imgEl.className = 'w-full h-full object-cover';
+
+                thumb.appendChild(imgEl);
+                thumb.onclick = () => {
+                    currentImgIndex = idx;
+                    updateThumbnailsUI();
+                    render();
+                };
+
+                thumbnailContainer.appendChild(thumb);
+            });
+        }
+
+        function handleFiles(files) {
+            const fileArray = Array.from(files);
+            let loadedCount = 0;
+
+            fileArray.forEach(file => {
+                if (!file.type.startsWith('image/')) return;
+                
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        imageList.push({
+                            name: file.name,
+                            img: img
+                        });
+                        loadedCount++;
+                        if (loadedCount === fileArray.length || imageList.length === fileArray.length) {
+                            if (currentImgIndex === -1) currentImgIndex = 0;
+                            updateThumbnailsUI();
+                            render();
+                        }
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        // Image Upload Event Listeners
+        imageInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFiles(e.target.files);
+            }
+        });
+
+        // Drag and Drop
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('border-cyan-500');
+        });
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('border-cyan-500');
+        });
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('border-cyan-500');
+            if (e.dataTransfer.files.length > 0) {
+                handleFiles(e.dataTransfer.files);
+            }
+        });
+
+        clearBatchBtn.addEventListener('click', () => {
+            imageList = [];
+            currentImgIndex = -1;
+            updateThumbnailsUI();
+        });
+
+        // Toggle Mask controls
+        enableMask.addEventListener('change', () => {
+            if (enableMask.checked) {
+                maskControls.classList.remove('opacity-50', 'pointer-events-none');
+            } else {
+                maskControls.classList.add('opacity-50', 'pointer-events-none');
+            }
+            render();
+        });
+
+        // Realtime updates
+        [groupText, handleText, positionSelect, fontSize, textColor, addBgBox, maskY, maskHeight, maskCo
